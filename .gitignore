@@ -1,0 +1,4 @@
+*.o
+*.lib
+.makefile-mini/
+*.zip
