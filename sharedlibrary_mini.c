@@ -8,6 +8,10 @@
 #include <windows.h>
 #else //< #elif defined(__linux__)
 #include <dlfcn.h>
+// NOTE: maybe replace this with a better solution as I am not sure if it is..
+//       .. safe to #undef linux (currently doing it after all includes on..
+//       .. purpose because I am not sure about safety)
+#undef linux //< assure that linux is available, only using the macro __linux__
 #endif
 
 
@@ -194,9 +198,20 @@ int sm_load(char* pathToFile, int* sharedlibrary)
 	}
 	
 #else //< #elif defined(__linux__)
-	void* a = dlopen(filename, RTLD_NOW);
+	// NOTE: "On success, dlopen() [returns] a non-NULL handle for the..
+	//       .. loaded object.  On error (file could not be found, was not..
+	//       .. readable, had the wrong format, or caused errors during..
+	//       .. loading), these functions return NULL.",..
+	//       .. https://www.man7.org/linux/man-pages/man3/dlopen.3.html
+	void* a = dlopen(pathToFile, RTLD_NOW);
 	if(a == NULL)
 	{
+		// NOTE: "dlerror() returns NULL if no errors have occurred since..
+		//       .. initialization or since it was last called.",..
+		//       .. https://www.man7.org/linux/man-pages/man3/dlerror.3.html
+		//       ^
+		//       as dlopen failed, assuming an error occured so not required..
+		//       .. to check "dlerror() == NULL"?
 		on_print_errorf2("%s in %s\n", dlerror(), __FUNCTION__);
 		return 0;
 	}
@@ -252,7 +267,7 @@ int sm_unload(int sharedlibrary)
 		}
 	}
 #else //< #elif defined(__linux__)
-	if(dlclose(infoAboutSharedlibrary->linux.a) != 0)
+	if(dlclose(a->linux.a) != 0)
 	{
 		on_print_warningf2("%s in %s\n", dlerror(), __FUNCTION__);
 	}
@@ -322,14 +337,14 @@ int sm_import(int sharedlibrary, char* functionname, void(**function)())
 	dlerror();
 	void* a = dlsym(infoAboutSharedlibrary->linux.a, functionname);
 	char* b = dlerror();
-	if(b == NULL)
+	if(b != NULL)
 	{
 		on_print_errorf2("%s in %s\n", b, __FUNCTION__);
 		
 		return 0;
 	}
 	
-	function = (void(*)())a;
+	*function = (void(*)())a;
 #endif
 
 	return 1;
