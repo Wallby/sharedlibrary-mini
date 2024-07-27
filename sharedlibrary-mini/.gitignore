@@ -1,7 +1,0 @@
-*.o
-*.a
-*.lib
-*.exe
-test
-.makefile-mini/
-*.zip
